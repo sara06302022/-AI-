@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>國科會研發成果 AI 智慧導航查詢系統</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700;900&family=Noto+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#16233F; --navy-2:#223258;
+  --paper:#F6F3EA; --paper-2:#EFEADB; --card:#FFFDF8;
+  --gold:#AD7F26; --gold-soft:#E4C877;
+  --ink:#221F1A; --muted:#726C5E;
+  --green:#2F6B4F; --green-soft:#E4EFE7;
+  --coral:#AE4A30; --coral-soft:#F5E5DF;
+  --line:#DCD5C2; --line-2:#CBC2A8;
+  --radius:4px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--paper);
+  background-image:radial-gradient(circle at 100% 0%, rgba(173,127,38,0.06), transparent 40%),
+                    radial-gradient(circle at 0% 100%, rgba(22,35,63,0.05), transparent 45%);
+  color:var(--ink); font-family:"Noto Sans TC","PingFang TC",sans-serif; line-height:1.6; min-height:100vh;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:22px 18px 50px;}
+
+/* header */
+.masthead{display:flex;align-items:center;gap:16px;padding-bottom:16px;margin-bottom:18px;border-bottom:2px solid var(--navy);}
+.seal{flex:0 0 auto;width:48px;height:48px;border-radius:50%;border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;
+  background:repeating-conic-gradient(from 0deg, rgba(173,127,38,0.12) 0deg 4deg, transparent 4deg 18deg);}
+.seal::after{content:"研";font-family:"Noto Serif TC",serif;font-weight:900;font-size:19px;color:var(--gold);}
+.masthead h1{font-family:"Noto Serif TC",serif;font-weight:900;font-size:22px;margin:0 0 3px;color:var(--navy);letter-spacing:.3px;}
+.masthead p{margin:0;color:var(--muted);font-size:12.5px;}
+.masthead .tag{margin-left:auto;font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--gold);
+  border:1px solid var(--gold-soft);background:var(--card);padding:5px 10px;border-radius:20px;white-space:nowrap;}
+
+/* search bar — the main operable surface */
+.search-zone{background:var(--navy);border-radius:var(--radius);padding:20px 22px;margin-bottom:16px;}
+.search-zone .lbl{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--gold-soft);letter-spacing:1px;margin-bottom:8px;}
+.search-box{display:flex;gap:10px;align-items:center;background:#fff;border-radius:3px;padding:4px;}
+.search-box .ico{padding:0 10px;color:var(--muted);font-size:17px;}
+.search-box input{flex:1;border:none;outline:none;padding:13px 6px;font-size:16px;font-family:inherit;background:transparent;}
+.search-box button{border:none;background:transparent;color:var(--muted);font-size:13px;padding:8px 12px;cursor:pointer;display:none;}
+.search-box button.show{display:block;}
+.scenario-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+.scenario-chip{border:1px solid rgba(228,200,119,0.4);background:rgba(255,255,255,0.06);color:#EDE7D6;
+  border-radius:20px;padding:6px 12px;font-size:12px;cursor:pointer;}
+.scenario-chip:hover{border-color:var(--gold-soft);background:rgba(228,200,119,0.14);}
+
+/* category filter */
+.cat-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+.cat-btn{border:1px solid var(--line-2);background:var(--card);border-radius:20px;padding:7px 14px;
+  font-size:12.5px;cursor:pointer;color:var(--navy);font-family:inherit;}
+.cat-btn:hover{border-color:var(--gold);}
+.cat-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+.cat-count{opacity:.65;margin-left:3px;font-size:11px;}
+
+/* layout */
+.grid{display:grid;grid-template-columns:1fr 300px;gap:18px;align-items:start;}
+@media (max-width:900px){.grid{grid-template-columns:1fr;}}
+
+.result-meta{font-size:12.5px;color:var(--muted);margin-bottom:10px;font-family:"IBM Plex Mono",monospace;}
+.result-list{display:grid;gap:12px;}
+.card{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--line-2);border-radius:3px;padding:16px 18px;}
+.card.hot{border-left-color:var(--gold);}
+.card .top-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;cursor:pointer;}
+.card .cat-tag{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--gold);
+  background:#FFF8E8;border:1px solid var(--gold-soft);border-radius:20px;padding:2px 9px;margin-bottom:6px;}
+.card .q{font-size:15px;font-weight:700;color:var(--ink);margin:0;}
+.card .chev{color:var(--muted);font-size:13px;flex:0 0 auto;margin-top:2px;transition:transform .15s;}
+.card.open .chev{transform:rotate(90deg);}
+.card .body{display:none;margin-top:12px;}
+.card.open .body{display:block;}
+.card .answer{font-size:13.8px;color:var(--ink);white-space:pre-line;margin:0 0 12px;padding-top:10px;border-top:1px dashed var(--line-2);}
+.law-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+.law-tag{font-size:11.5px;font-family:"IBM Plex Mono",monospace;color:var(--navy);background:var(--paper-2);
+  border:1px solid var(--line-2);border-radius:3px;padding:4px 8px;}
+.card-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+.mini-btn{font-size:12px;border:1px solid var(--line-2);background:#fff;border-radius:3px;padding:6px 11px;cursor:pointer;color:var(--navy);font-family:inherit;}
+.mini-btn:hover{border-color:var(--gold);}
+.mini-btn.gold{background:var(--gold);color:#fff;border-color:var(--gold);}
+.mini-btn.gold:hover{filter:brightness(1.07);}
+.mini-btn.logged{background:var(--green);border-color:var(--green);color:#fff;cursor:default;}
+.law-link-full{font-size:12px;color:var(--navy);text-decoration:none;border-bottom:1px solid var(--gold);margin-left:auto;}
+.law-link-full:hover{color:var(--gold);}
+.similar-wrap{margin-top:12px;padding-top:10px;border-top:1px dashed var(--line-2);}
+.similar-wrap .lbl{font-size:11px;color:var(--muted);font-family:"IBM Plex Mono",monospace;margin-bottom:6px;}
+.similar-link{display:inline-block;font-size:12.5px;color:var(--navy);background:var(--paper-2);border-radius:3px;
+  padding:5px 10px;margin:0 6px 6px 0;cursor:pointer;border:1px solid var(--line);}
+.similar-link:hover{border-color:var(--gold);}
+.empty-note{color:var(--muted);font-size:13.5px;padding:30px 10px;text-align:center;}
+
+/* side panel */
+.side-panel{background:var(--navy);color:#fff;border-radius:var(--radius);padding:20px 20px 18px;position:sticky;top:18px;}
+.side-panel h3{font-family:"Noto Serif TC",serif;font-size:15px;margin:0 0 4px;color:var(--gold-soft);}
+.side-panel .cnt{font-family:"IBM Plex Mono",monospace;font-size:30px;font-weight:600;margin:4px 0 2px;}
+.side-panel .cnt-lbl{font-size:11px;color:#B7C0D3;margin-bottom:16px;}
+.bar-row{margin-bottom:8px;}
+.bar-row .bh{display:flex;justify-content:space-between;font-size:11px;color:#D9DFEA;margin-bottom:3px;}
+.bar-track{height:6px;background:rgba(255,255,255,0.12);border-radius:3px;overflow:hidden;}
+.bar-fill{height:100%;background:var(--gold);border-radius:3px;}
+.log-list{margin-top:14px;border-top:1px solid rgba(255,255,255,0.15);padding-top:12px;max-height:280px;overflow-y:auto;}
+.log-item{font-size:11.5px;color:#D9DFEA;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.08);}
+.log-item .t{font-family:"IBM Plex Mono",monospace;font-size:9.5px;color:#8994AC;}
+.log-item .c{color:var(--gold-soft);}
+.side-empty{font-size:11.5px;color:#8994AC;}
+.reset-link{display:inline-block;margin-top:12px;font-size:10.5px;color:#8994AC;cursor:pointer;text-decoration:underline;}
+
+.foot-note{margin-top:26px;text-align:center;font-size:12px;color:var(--muted);}
+.foot-note a{color:var(--gold);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="masthead">
+    <div class="seal"></div>
+    <div>
+      <h1>研發成果 AI 智慧導航查詢系統</h1>
+      <p>接到電話當下即可查 — 輸入關鍵字或選分類，立即比對法規與案例</p>
+    </div>
+    <div class="tag">內部參考</div>
+  </div>
+
+  <div class="search-zone">
+    <div class="lbl">☎ 學校來電 → 立即輸入關鍵字</div>
+    <div class="search-box">
+      <span class="ico">🔍</span>
+      <input type="text" id="searchInput" placeholder="輸入關鍵字，例如：股權、大陸地區、技轉收入、既有成果、讓與…" autofocus>
+      <button id="clearBtn">清除</button>
+    </div>
+    <div class="scenario-row" id="scenarioRow"></div>
+  </div>
+
+  <div class="cat-row" id="catRow"></div>
+
+  <div class="grid">
+    <div>
+      <div class="result-meta" id="resultMeta"></div>
+      <div class="result-list" id="resultList"></div>
+    </div>
+
+    <div class="side-panel">
+      <h3>組織 FAQ 知識庫</h3>
+      <div class="cnt" id="kbCount">0</div>
+      <div class="cnt-lbl">已記錄之來電案例（持續累積）</div>
+      <div id="kbBars"></div>
+      <div class="log-list" id="kbLog"></div>
+      <div class="reset-link" id="kbReset">清除本示範累積紀錄</div>
+    </div>
+  </div>
+
+  <div class="foot-note">
+    法規全文查詢：<a href="https://law.nstc.gov.tw/LawCategoryMain.aspx" target="_blank" rel="noopener">國科會法規資料庫 law.nstc.gov.tw</a>
+    　｜　內容依「國科會研發成果FAQ」與討論文件整理，僅供內部參考，正式回覆請以法規原文與機關函釋為準
+  </div>
+</div>
+
+<script>
+/* ============ DATA ============ */
+const FAQ_DB = [
+  {id:1, cat:"既有成果授權", q:"如何與國科會簽訂「研發成果授權推廣合約書」？",
+   a:"請至「科技研發成果資訊系統（STRIKE）」（國科會首頁 > 登入學術研發服務網 > 所有申辦作業 > STRIKE）首頁／合約範本項下，下載「國科會既有成果授權推廣合約書」，經機關用印後函送本會辦理。",
+   laws:["國科會STRIKE系統合約範本"], kw:["既有成果","授權推廣合約","簽約","STRIKE"]},
+  {id:2, cat:"既有成果授權", q:"如何辦理歸屬國科會之既有研發成果的技轉授權事宜？",
+   a:"經同意代為推廣之計畫執行機構，應：一、公開推廣研發成果（發表會、說明會或其他公開方式）；二、透過公平公開程序遴選授權廠商，並以國內廠商優先，僅於無承接意願、無承接能力、不影響國內競爭力或授權國外更有利於整體發展等情形，方得授權國外廠商；三、協商授權金、衍生利益金、授權範圍與年限等條件，商業營利以有償授權為原則，學術、教育或公益用途得專案申請無償授權。",
+   laws:[], kw:["既有成果","技轉授權","遴選廠商","有償授權","無償授權"]},
+  {id:3, cat:"既有成果授權", q:"技轉授權合約書送本會核備用印時，須一併提供哪些資料？",
+   a:"一、技術公開資料（公開遴選廠商相關證明）；二、技術作價資料（作價會議紀錄、權利金協商紀錄等）；三、廠商評選資料（決議文件或原因說明）；四、廠商證明文件（公司執照、登記證明等）；五、合約書（稿），協商完成後由計畫主持人、授權廠商及執行機構用印，再送本會用印完成簽約。",
+   laws:[], kw:["技轉授權","備查文件","合約用印"]},
+  {id:4, cat:"既有成果授權", q:"計畫執行機構是否可代為推廣歸屬於國科會的研發成果？",
+   a:"如屬本會核備之技轉專責單位，且已與本會簽訂「國科會研發成果授權推廣合約書」者，即可辦理歸屬本會既有成果之技轉授權事宜。",
+   laws:[], kw:["既有成果","代為推廣","技轉專責單位"]},
+  {id:5, cat:"既有成果授權", q:"既有成果推廣收入如何分配？",
+   a:"依「政府科學技術研究發展成果歸屬及運用辦法」第17條、第18條，及「國科會科學技術研究發展成果歸屬及運用辦法」第13條、第14條，計畫執行機構應將授權金、衍生利益金等所得收入，依身分別分配 20%（公立學研機構）或 40%（其他計畫執行機構）予本會，扣除後餘額依比率分配研發成果創作人及推廣有功人員。",
+   laws:["政府科學技術研究發展成果歸屬及運用辦法 第17條","政府科學技術研究發展成果歸屬及運用辦法 第18條","國科會科學技術研究發展成果歸屬及運用辦法 第13條","國科會科學技術研究發展成果歸屬及運用辦法 第14條"],
+   kw:["收入分配","20%","40%","衍生利益金","既有成果"]},
+  {id:6, cat:"成果管理運用", q:"研發成果讓與、終止維護是否須經國科會審查同意？",
+   a:"「授權」（含專屬、非專屬）不須本會審查，由執行機構依規定自行評估辦理；「讓與」與「終止維護」則須經本會審查同意，需完成公開推廣一定合理期間、內部評估程序及公告周知等程序要件，隨到隨審，審查時間約2至4個月。若執行機構已建構完備管理機制並有技轉實績，得申請1至5年之「通案授權」，期間內無須逐案審查，僅需報部備查。",
+   laws:["國科會科學技術研究發展成果歸屬及運用辦法 第11條","國科會科學技術研究發展成果歸屬及運用辦法 第12條","國科會科學技術研究發展成果歸屬及運用辦法 第16條","國科會科學技術研究發展成果歸屬及運用辦法 第17條","國科會科學技術研究發展成果歸屬及運用辦法 第18條"],
+   kw:["讓與","終止維護","通案授權","審查同意","成果管理"]},
+  {id:7, cat:"通案授權", q:"如何申請「通案授權」辦理研發成果讓與及終止維護？",
+   a:"依辦法第18條，建置完備管理機制且有本會成果技轉實績者，得申請1至5年通案授權期間，逕依第16條或第17條辦理讓與、終止維護後報部備查。首次申請隨到隨審約3個月；續約應於期限屆滿前3個月提出；本會將於期限屆滿前6個月安排實地查核。",
+   laws:["國科會科學技術研究發展成果歸屬及運用辦法 第4條","國科會科學技術研究發展成果歸屬及運用辦法 第5條","國科會科學技術研究發展成果歸屬及運用辦法 第18條"],
+   kw:["通案授權","實地查核","管理機制"]},
+  {id:8, cat:"成果管理運用", q:"研發成果之資訊管理系統為何？",
+   a:"應切實登錄「科技研發成果資訊系統（STRIKE）」，功能包含：研發成果與專利資料登錄管理、技轉合約與收入登錄管理、獎補助申請管理、資料查詢匯出，以及法規與申請文件下載。",
+   laws:[], kw:["STRIKE","資訊系統","登錄管理"]},
+  {id:9, cat:"大陸地區", q:"研發成果授權或讓與大陸地區廠商，或於大陸地區實施，該如何處理？",
+   a:"須符合下列要件之一：國內無承接意願、國內無承接能力、不影響國內廠商競爭力及技術發展、授權國外對象更有利國家整體發展。並依經濟部「在大陸地區從事投資或技術合作許可辦法」，應先向投審會申請許可（個案累計金額在公告限額以下者得以申報方式為之）；讓與合約應載明受讓廠商如涉及該辦法審查事項，應向投審會申請許可，並留意避免與競爭國廠商之關係。",
+   laws:["國科會科學技術研究發展成果歸屬及運用辦法 第12條","在大陸地區從事投資或技術合作許可辦法 第7條"],
+   kw:["大陸地區","投審會","技術合作許可","國家核心科技"]},
+  {id:10, cat:"成果管理運用", q:"研發成果績效表現與獲得本會補助或獎勵是否有關？",
+   a:"各項成果績效（含專利、著作權等智慧財產權、技術移轉、論文發表等）及相關管理機制，係本會獎補助審查之重要指標與考核項目，計畫主持人及執行機構均應依規定切實填報並詳實登錄於學術研發服務網及STRIKE系統。",
+   laws:[], kw:["績效","獎補助","考核指標"]},
+  {id:11, cat:"技轉收入", q:"計畫執行機構管理或運用研發成果所獲得收入，分配原則為何？",
+   a:"執行機構應將所得收入（不含稅、不得扣除成本）依身分別提撥 20%（公私立學校、公立研究機關）或 40%（其他執行機構）上繳行政院科發基金；扣除上繳數額後，餘額依一定比率分配創作人／發明人及推廣有功人員，分配比率由各執行機構自訂；股權與現金收入應分別依比率計算上繳。",
+   laws:["科學技術基本法","國科會科學技術研究發展成果歸屬及運用辦法"],
+   kw:["技轉收入","分配原則","上繳","科發基金","20%","40%"]},
+  {id:12, cat:"技轉收入", q:"計畫之共同主持人，可否與總主持人共同分配技轉等研發成果收入？",
+   a:"執行機構得依研發成果之貢獻度，由各技術貢獻者（主持人、共同主持人等）協商訂定收入分配比例並簽署同意書，共同主持人及學生亦得視實際參與情形列為合約當事人，共同分配收入。",
+   laws:[], kw:["共同主持人","收入分配","技轉"]},
+  {id:13, cat:"技轉收入", q:"研發成果收入為股權時，應如何繳交本會？",
+   a:"已發行無實體股票者，應劃撥至「行政院國家科學技術發展基金」有價證券保管劃撥帳戶；已發行實體股票或未發行股票者，應檢附技轉合約明細表、股權轉讓證明、過戶申請書及擬繳交股權，函請本會用印；股權證明書應載明股東為「行政院國家科學技術發展基金」、公司全名、代表人、統一編號、每股金額、持股數及核發日期，並經公司及代表人用印，最後以公文檢附相關證明函報本會。",
+   laws:["國科會科學技術研究發展成果歸屬及運用辦法"], kw:["股權","持股比例","過戶","股權轉讓","技轉收入"]},
+  {id:14, cat:"緩課擇低課稅", q:"創作人緩課暨擇低課稅，有提供哪些相關法規或流程參考？",
+   a:"可至本會「科研成果法規鬆綁專區」（國科會首頁 > 資訊及資料公開 > 政府資訊開放 > 科研成果法規鬆綁專區）查詢相關法規及流程。",
+   laws:["科研成果法規鬆綁專區（nstc.gov.tw）"], kw:["緩課","擇低課稅","創作人","法規鬆綁"]},
+  {id:15, cat:"歸屬判定", q:"如何判別國科會補助計畫研發成果之歸屬？",
+   a:"自88年1月22日科學技術基本法公布施行後，原則歸屬計畫執行機構。判定方式：補助年度87年以前者歸屬本會；88年者依核定會期區分（1277次業務會報前歸屬本會，1278次後一般計畫下放執行機構、舊產學計畫仍歸屬本會）；89年之後補助案件則一律歸屬計畫執行機構。",
+   laws:["科學技術基本法"], kw:["歸屬判定","88年","89年","下放","科學技術基本法"]},
+  {id:16, cat:"歸屬判定", q:"計畫主持人可以將下放後之研發成果歸屬於教授個人嗎？",
+   a:"不可以。下放後研發成果歸屬計畫執行機構，不得由主持人個人持有；主持人可協助專利申請、成果推廣及技術移轉，並依機構規定分配部分收入或申請相關獎補助。如欲自行運用研發成果，須依辦法第11條由執行機構評估更能符合科技基本法宗旨者，方能例外以授權或讓與方式辦理。",
+   laws:["國科會科學技術研究發展成果歸屬及運用辦法 第11條"], kw:["歸屬判定","個人持有","下放","第11條"]},
+  {id:17, cat:"歸屬判定", q:"執行國科會補助研究計畫所獲得之專利，其專利權應如何認定？教授可自行持有嗎？",
+   a:"科學技術基本法公布施行後，補助計畫所產出之國內外專利權、商標權、營業秘密、電路布局權、著作權等智慧財產權及成果，原則歸屬計畫執行機構所有，並負管理、運用及推廣之責；個人原則上不得持有政府補助、委託或出資計畫之研發成果，相關成果均應循執行機構行政程序及管理機制處理。",
+   laws:["科學技術基本法"], kw:["專利權","教授持有","歸屬判定"]},
+  {id:18, cat:"產學合作", q:"產學合作計畫之研發成果，其歸屬應如何認定？",
+   a:"產學合作計畫所獲研發成果，屬本會補助部分，除經本會認定歸屬本會者外，全部歸屬計畫執行機構所有（詳經費核定清單研究成果歸屬欄）；申請專利、技術移轉、授權及權益分配由執行機構依法令處理，合作企業不得拒絕並應配合協助。屬合作企業出資部分，由執行機構與企業依相關法令商議約定。",
+   laws:[], kw:["產學合作","成果歸屬","出資部分"]},
+  {id:19, cat:"產學合作", q:"產學合作計畫所產出之研發成果，可否歸屬於教授個人？",
+   a:"不可以。本會補助產學合作研究計畫所獲成果，除經本會認定歸屬本會者外，全部歸屬產學計畫執行機構所有，詳見本會補助產學合作研究計畫作業要點第16點規定。",
+   laws:["本會補助產學合作研究計畫作業要點 第16點"], kw:["產學合作","教授個人","歸屬"]},
+  {id:20, cat:"產學合作", q:"計畫主持人於產學計畫執行期間變更計畫執行機構，其研發成果歸屬事宜應如何處理？",
+   a:"依作業要點第16點第5項，主持人於產學合作計畫執行期間變更所屬機構時，研發成果之歸屬、管理及運用等事項，由變更前、後機構、主持人及合作企業自行協調，並由執行機構函報本會同意後辦理。",
+   laws:["本會補助產學合作研究計畫作業要點 第16點第5項"], kw:["產學合作","變更機構","歸屬事宜"]},
+  {id:21, cat:"產學合作", q:"產學計畫執行完畢後，若合作企業未簽先期技轉合約也未談妥後續技轉，可否逕行製造或生產該技術？",
+   a:"不行。合作企業如未簽訂先期技轉合約或未依規定完成技轉程序，即無使用該技術或成果之權限。",
+   laws:[], kw:["產學合作","先期技轉合約","未簽約"]},
+];
+
+const CATS = [...new Set(FAQ_DB.map(f=>f.cat))];
+
+const SCENARIOS = [
+  {label:"詢問既有成果技轉授權", seed:"既有成果 技轉授權"},
+  {label:"技轉收入是股權，如何繳交？", seed:"股權 技轉收入"},
+  {label:"想授權技術給大陸地區廠商", seed:"大陸地區 授權"},
+  {label:"研發成果可否歸屬教授個人？", seed:"歸屬 教授個人"},
+  {label:"研發成果要辦理讓與或終止維護", seed:"讓與 終止維護"},
+];
+
+/* ============ STATE ============ */
+let state = { query:"", activeCat:"全部", openId:null, loggedIds:new Set() };
+
+/* ============ STORAGE ============ */
+const KB_KEY = "org_faq_call_log";
+let kbCache = [];
+async function loadKB(){
+  try{ const res = await window.storage.get(KB_KEY, true); kbCache = res && res.value ? JSON.parse(res.value) : []; }
+  catch(e){ kbCache = []; }
+  renderKB();
+}
+async function saveKB(){ try{ await window.storage.set(KB_KEY, JSON.stringify(kbCache), true); }catch(e){} }
+async function addToKB(item){
+  kbCache.unshift({cat:item.cat, q:item.q, time:new Date().toISOString().slice(0,16).replace('T',' ')});
+  state.loggedIds.add(item.id);
+  await saveKB();
+  renderKB();
+}
+async function resetKB(){ kbCache=[]; state.loggedIds=new Set(); await saveKB(); renderKB(); renderResults(); }
+
+function renderKB(){
+  document.getElementById('kbCount').textContent = kbCache.length;
+  const barsEl = document.getElementById('kbBars');
+  if(kbCache.length===0){
+    barsEl.innerHTML = '<div class="side-empty">尚無累積紀錄，查到解答後可點「加入知識庫」記錄本次來電。</div>';
+  } else {
+    const counts = {};
+    kbCache.forEach(k=>{ counts[k.cat]=(counts[k.cat]||0)+1; });
+    const max = Math.max(...Object.values(counts));
+    barsEl.innerHTML = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([cat,c])=>`
+      <div class="bar-row"><div class="bh"><span>${cat}</span><span>${c}</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(c/max*100).toFixed(0)}%"></div></div></div>`).join('');
+  }
+  document.getElementById('kbLog').innerHTML = kbCache.slice(0,14).map(k=>
+    `<div class="log-item"><div class="t">${k.time}</div><span class="c">［${k.cat}］</span>${k.q}</div>`).join('');
+}
+document.getElementById('kbReset').addEventListener('click', ()=>{
+  if(confirm('確定要清除本示範的累積紀錄嗎？此資料為共用示範資料，清除後所有人皆會看到空白狀態。')) resetKB();
+});
+
+/* ============ SEARCH / FILTER ============ */
+function scoreItem(item, query){
+  if(!query.trim()) return 1;
+  const terms = query.trim().split(/\s+/).filter(Boolean);
+  let score = 0;
+  terms.forEach(t=>{
+    if(item.q.includes(t)) score += 3;
+    if(item.cat.includes(t)) score += 3;
+    if(item.kw.some(k=>k.includes(t)||t.includes(k))) score += 2;
+    if(item.a.includes(t)) score += 1;
+  });
+  return score;
+}
+function getFiltered(){
+  return FAQ_DB
+    .map(item=>({item, score:scoreItem(item, state.query)}))
+    .filter(x=> x.score>0 && (state.activeCat==="全部" || x.item.cat===state.activeCat))
+    .sort((a,b)=>b.score-a.score);
+}
+
+/* ============ RENDER: category chips ============ */
+function renderCats(){
+  const el = document.getElementById('catRow');
+  const counts = {};
+  FAQ_DB.forEach(f=>{ counts[f.cat]=(counts[f.cat]||0)+1; });
+  const all = ["全部", ...CATS];
+  el.innerHTML = all.map(c=>{
+    const n = c==="全部" ? FAQ_DB.length : counts[c];
+    return `<button class="cat-btn ${state.activeCat===c?'active':''}" data-cat="${c}">${c}<span class="cat-count">${n}</span></button>`;
+  }).join('');
+  el.querySelectorAll('.cat-btn').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      state.activeCat = b.dataset.cat;
+      state.query = "";
+      searchInput.value = "";
+      renderCats();
+      renderResults();
+    });
+  });
+}
+
+/* ============ RENDER: scenario chips ============ */
+function renderScenarios(){
+  const el = document.getElementById('scenarioRow');
+  el.innerHTML = SCENARIOS.map(s=>`<button class="scenario-chip" data-seed="${s.seed}">${s.label}</button>`).join('');
+  el.querySelectorAll('.scenario-chip').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      document.getElementById('searchInput').value = b.dataset.seed;
+      state.query = b.dataset.seed;
+      state.activeCat = "全部";
+      renderCats();
+      renderResults();
+    });
+  });
+}
+
+/* ============ RENDER: results ============ */
+function renderResults(){
+  const listEl = document.getElementById('resultList');
+  const metaEl = document.getElementById('resultMeta');
+  const filtered = getFiltered();
+  const clearBtn = document.getElementById('clearBtn');
+  clearBtn.classList.toggle('show', !!state.query);
+
+  metaEl.textContent = state.query
+    ? `關鍵字「${state.query}」共找到 ${filtered.length} 筆結果`
+    : `共 ${filtered.length} 筆案例（點選分類或輸入關鍵字篩選）`;
+
+  if(filtered.length===0){
+    listEl.innerHTML = '<div class="empty-note">找不到符合的項目，請嘗試其他關鍵字（例如：既有成果、技轉收入、大陸地區、股權、讓與）。</div>';
+    return;
+  }
+
+  listEl.innerHTML = filtered.map(({item, score})=>{
+    const isOpen = state.openId===item.id;
+    const isHot = score>=5;
+    const logged = state.loggedIds.has(item.id);
+    const similar = FAQ_DB.filter(f=>f.cat===item.cat && f.id!==item.id).slice(0,3);
+    return `
+      <div class="card ${isOpen?'open':''} ${isHot?'hot':''}" data-id="${item.id}">
+        <div class="top-row" data-toggle="${item.id}">
+          <div>
+            <span class="cat-tag">${item.cat}</span>
+            <p class="q">${item.q}</p>
+          </div>
+          <span class="chev">▶</span>
+        </div>
+        <div class="body">
+          <p class="answer">${item.a}</p>
+          ${item.laws.length ? `<div class="law-tags">${item.laws.map(l=>`<span class="law-tag">§ ${l}</span>`).join('')}</div>` : ''}
+          <div class="card-actions">
+            <button class="mini-btn ${logged?'logged':''}" data-log="${item.id}">${logged?'✓ 已加入知識庫':'＋ 加入知識庫'}</button>
+            <a class="law-link-full" href="https://law.nstc.gov.tw/LawCategoryMain.aspx" target="_blank" rel="noopener">查看法規全文 ↗</a>
+          </div>
+          ${similar.length? `<div class="similar-wrap">
+            <div class="lbl">相似案例</div>
+            ${similar.map(s=>`<span class="similar-link" data-jump="${s.id}">${s.q}</span>`).join('')}
+          </div>`:''}
+        </div>
+      </div>`;
+  }).join('');
+
+  listEl.querySelectorAll('[data-toggle]').forEach(t=>{
+    t.addEventListener('click', ()=>{
+      const id = parseInt(t.dataset.toggle);
+      state.openId = state.openId===id ? null : id;
+      renderResults();
+    });
+  });
+  listEl.querySelectorAll('[data-log]').forEach(b=>{
+    b.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const id = parseInt(b.dataset.log);
+      if(state.loggedIds.has(id)) return;
+      const item = FAQ_DB.find(f=>f.id===id);
+      addToKB(item);
+      renderResults();
+    });
+  });
+  listEl.querySelectorAll('[data-jump]').forEach(s=>{
+    s.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const id = parseInt(s.dataset.jump);
+      state.openId = id;
+      renderResults();
+      document.querySelector(`.card[data-id="${id}"]`)?.scrollIntoView({behavior:'smooth', block:'center'});
+    });
+  });
+}
+
+/* ============ INIT ============ */
+const searchInput = document.getElementById('searchInput');
+searchInput.addEventListener('input', ()=>{
+  state.query = searchInput.value;
+  renderResults();
+});
+document.getElementById('clearBtn').addEventListener('click', ()=>{
+  searchInput.value = ''; state.query = ''; renderResults(); searchInput.focus();
+});
+
+renderCats();
+renderScenarios();
+renderResults();
+loadKB();
+</script>
+</body>
+</html>
