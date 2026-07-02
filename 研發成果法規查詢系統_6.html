@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>國科會研發成果 AI 智慧導航查詢系統</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700;900&family=Noto+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#16233F; --navy-2:#223258;
+  --paper:#F6F3EA; --paper-2:#EFEADB; --card:#FFFDF8;
+  --gold:#AD7F26; --gold-soft:#E4C877;
+  --ink:#221F1A; --muted:#726C5E;
+  --green:#2F6B4F; --green-soft:#E4EFE7;
+  --coral:#AE4A30; --coral-soft:#F5E5DF;
+  --line:#DCD5C2; --line-2:#CBC2A8;
+  --radius:4px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--paper);
+  background-image:radial-gradient(circle at 100% 0%, rgba(173,127,38,0.06), transparent 40%),
+                    radial-gradient(circle at 0% 100%, rgba(22,35,63,0.05), transparent 45%);
+  color:var(--ink); font-family:"Noto Sans TC","PingFang TC",sans-serif; line-height:1.6; min-height:100vh;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:22px 18px 50px;}
+
+/* header */
+.masthead{display:flex;align-items:center;gap:16px;padding-bottom:16px;margin-bottom:18px;border-bottom:2px solid var(--navy);}
+.seal{flex:0 0 auto;width:48px;height:48px;border-radius:50%;border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;
+  background:repeating-conic-gradient(from 0deg, rgba(173,127,38,0.12) 0deg 4deg, transparent 4deg 18deg);}
+.seal::after{content:"研";font-family:"Noto Serif TC",serif;font-weight:900;font-size:19px;color:var(--gold);}
+.masthead h1{font-family:"Noto Serif TC",serif;font-weight:900;font-size:22px;margin:0 0 3px;color:var(--navy);letter-spacing:.3px;}
+.masthead p{margin:0;color:var(--muted);font-size:12.5px;}
+.masthead .tag{margin-left:auto;font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--gold);
+  border:1px solid var(--gold-soft);background:var(--card);padding:5px 10px;border-radius:20px;white-space:nowrap;}
+
+/* search bar — the main operable surface */
+.search-zone{background:var(--navy);border-radius:var(--radius);padding:20px 22px;margin-bottom:16px;}
+.search-zone .lbl{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--gold-soft);letter-spacing:1px;margin-bottom:8px;}
+.search-box{display:flex;gap:10px;align-items:center;background:#fff;border-radius:3px;padding:4px;}
+.search-box .ico{padding:0 10px;color:var(--muted);font-size:17px;}
+.search-box input{flex:1;border:none;outline:none;padding:13px 6px;font-size:16px;font-family:inherit;background:transparent;}
+.search-box button{border:none;background:transparent;color:var(--muted);font-size:13px;padding:8px 12px;cursor:pointer;display:none;}
+.search-box button.show{display:block;}
+.scenario-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+.scenario-chip{border:1px solid rgba(228,200,119,0.4);background:rgba(255,255,255,0.06);color:#EDE7D6;
+  border-radius:20px;padding:6px 12px;font-size:12px;cursor:pointer;}
+.scenario-chip:hover{border-color:var(--gold-soft);background:rgba(228,200,119,0.14);}
+
+/* category filter */
+.cat-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+.cat-btn{border:1px solid var(--line-2);background:var(--card);border-radius:20px;padding:7px 14px;
+  font-size:12.5px;cursor:pointer;color:var(--navy);font-family:inherit;}
+.cat-btn:hover{border-color:var(--gold);}
+.cat-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+.cat-count{opacity:.65;margin-left:3px;font-size:11px;}
+
+/* layout */
+.grid{display:grid;grid-template-columns:1fr 300px;gap:18px;align-items:start;}
+@media (max-width:900px){.grid{grid-template-columns:1fr;}}
+
+.result-meta{font-size:12.5px;color:var(--muted);margin-bottom:10px;font-family:"IBM Plex Mono",monospace;}
+.result-list{display:grid;gap:12px;}
+.card{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--line-2);border-radius:3px;padding:16px 18px;}
+.card.hot{border-left-color:var(--gold);}
+.card .top-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;cursor:pointer;}
+.card .cat-tag{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--gold);
+  background:#FFF8E8;border:1px solid var(--gold-soft);border-radius:20px;padding:2px 9px;margin-bottom:6px;}
+.card .q{font-size:15px;font-weight:700;color:var(--ink);margin:0;}
+.card .chev{color:var(--muted);font-size:13px;flex:0 0 auto;margin-top:2px;transition:transform .15s;}
+.card.open .chev{transform:rotate(90deg);}
+.card .body{display:none;margin-top:12px;}
+.card.open .body{display:block;}
+.card .answer{font-size:13.8px;color:var(--ink);white-space:pre-line;margin:0 0 12px;padding-top:10px;border-top:1px dashed var(--line-2);}
+.law-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+.law-tag{font-size:11.5px;font-family:"IBM Plex Mono",monospace;color:var(--navy);background:var(--paper-2);
+  border:1px solid var(--line-2);border-radius:3px;padding:4px 8px;}
+.card-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+.mini-btn{font-size:12px;border:1px solid var(--line-2);background:#fff;border-radius:3px;padding:6px 11px;cursor:pointer;color:var(--navy);font-family:inherit;}
+.mini-btn:hover{border-color:var(--gold);}
+.mini-btn.gold{background:var(--gold);color:#fff;border-color:var(--gold);}
+.mini-btn.gold:hover{filter:brightness(1.07);}
+.mini-btn.logged{background:var(--green);border-color:var(--green);color:#fff;cursor:default;}
+.law-link-full{font-size:12px;color:var(--navy);text-decoration:none;border-bottom:1px solid var(--gold);margin-left:auto;}
+.law-link-full:hover{color:var(--gold);}
+.similar-wrap{margin-top:12px;padding-top:10px;border-top:1px dashed var(--line-2);}
+.similar-wrap .lbl{font-size:11px;color:var(--muted);font-family:"IBM Plex Mono",monospace;margin-bottom:6px;}
+.similar-link{display:inline-block;font-size:12.5px;color:var(--navy);background:var(--paper-2);border-radius:3px;
+  padding:5px 10px;margin:0 6px 6px 0;cursor:pointer;border:1px solid var(--line);}
+.similar-link:hover{border-color:var(--gold);}
+.empty-note{color:var(--muted);font-size:13.5px;padding:30px 10px;text-align:center;}
+
+/* side panel */
+.side-panel{background:var(--navy);color:#fff;border-radius:var(--radius);padding:20px 20px 18px;position:sticky;top:18px;}
+.side-panel h3{font-family:"Noto Serif TC",serif;font-size:15px;margin:0 0 4px;color:var(--gold-soft);}
+.side-panel .cnt{font-family:"IBM Plex Mono",monospace;font-size:30px;font-weight:600;margin:4px 0 2px;}
+.side-panel .cnt-lbl{font-size:11px;color:#B7C0D3;margin-bottom:16px;}
+.bar-row{margin-bottom:8px;}
+.bar-row .bh{display:flex;justify-content:space-between;font-size:11px;color:#D9DFEA;margin-bottom:3px;}
+.bar-track{height:6px;background:rgba(255,255,255,0.12);border-radius:3px;overflow:hidden;}
+.bar-fill{height:100%;background:var(--gold);border-radius:3px;}
+.log-list{margin-top:14px;border-top:1px solid rgba(255,255,255,0.15);padding-top:12px;max-height:280px;overflow-y:auto;}
+.log-item{font-size:11.5px;color:#D9DFEA;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.08);}
+.log-item .t{font-family:"IBM Plex Mono",monospace;font-size:9.5px;color:#8994AC;}
+.log-item .c{color:var(--gold-soft);}
+.side-empty{font-size:11.5px;color:#8994AC;}
+.reset-link{display:inline-block;margin-top:12px;font-size:10.5px;color:#8994AC;cursor:pointer;text-decoration:underline;}
+
+.foot-note{margin-top:26px;text-align:center;font-size:12px;color:var(--muted);}
+.foot-note a{color:var(--gold);}
+
+/* ===== AI 智能小幫手 ===== */
+.ai-zone{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;margin-bottom:18px;}
+.ai-head{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.ai-avatar{width:34px;height:34px;border-radius:50%;background:var(--navy);color:var(--gold-soft);
+  display:flex;align-items:center;justify-content:center;font-size:15px;flex:0 0 auto;}
+.ai-head h2{font-family:"Noto Serif TC",serif;font-size:17px;margin:0;color:var(--navy);}
+.ai-head p{margin:1px 0 0;font-size:12px;color:var(--muted);}
+.ai-log{display:flex;flex-direction:column;gap:14px;margin-bottom:14px;max-height:520px;overflow-y:auto;padding-right:4px;}
+.ai-log:empty{display:none;}
+.msg-row{display:flex;gap:10px;}
+.msg-row.user{flex-direction:row-reverse;}
+.msg-bubble{max-width:82%;border-radius:8px;padding:11px 14px;font-size:13.8px;line-height:1.65;}
+.msg-row.user .msg-bubble{background:var(--navy);color:#fff;border-top-right-radius:2px;}
+.msg-row.ai .msg-bubble{background:var(--paper-2);border:1px solid var(--line);border-top-left-radius:2px;max-width:92%;}
+.msg-avatar{width:26px;height:26px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-size:12px;}
+.msg-row.user .msg-avatar{background:var(--gold-soft);color:var(--navy);}
+.msg-row.ai .msg-avatar{background:var(--navy);color:var(--gold-soft);}
+.ai-answer-text{white-space:pre-line;margin:0;}
+.ai-block-title{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:1px;color:var(--gold);
+  text-transform:uppercase;margin:14px 0 8px;display:flex;align-items:center;gap:6px;}
+.ai-block-title::before{content:"";width:14px;height:1px;background:var(--gold-soft);}
+
+/* 法規依據卡片 */
+.law-cite{border:1px solid var(--gold-soft);background:#FFFCF3;border-radius:3px;padding:10px 12px;margin-bottom:8px;}
+.law-cite .lc-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px;}
+.law-cite .lc-name{font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:600;color:var(--navy);}
+.law-cite .lc-src{font-size:10.5px;color:var(--muted);}
+.law-cite .lc-text{font-size:12.8px;color:var(--ink);white-space:pre-line;}
+.law-cite.lc-nofull{border-style:dashed;background:var(--paper-2);}
+.law-cite.lc-nofull .lc-text{color:var(--muted);font-style:italic;}
+
+/* 流程導航 stepper */
+.proc-nav{display:flex;flex-direction:column;gap:0;}
+.proc-step{display:flex;gap:12px;position:relative;padding-bottom:16px;}
+.proc-step:last-child{padding-bottom:0;}
+.proc-step .ps-dot{flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:var(--navy);color:#fff;
+  font-family:"IBM Plex Mono",monospace;font-size:11px;display:flex;align-items:center;justify-content:center;z-index:1;}
+.proc-step:not(:last-child)::before{content:"";position:absolute;left:11px;top:22px;bottom:0;width:1px;background:var(--line-2);}
+.proc-step .ps-text{font-size:13px;padding-top:1px;}
+
+/* 應備文件 checklist */
+.doc-list{list-style:none;margin:0;padding:0;}
+.doc-list li{display:flex;gap:8px;align-items:flex-start;font-size:13px;padding:6px 0;border-bottom:1px dashed var(--line);}
+.doc-list li:last-child{border-bottom:none;}
+.doc-list li::before{content:"☐";color:var(--gold);flex:0 0 auto;font-size:14px;line-height:1.3;}
+
+.ai-input-row{display:flex;gap:10px;}
+.ai-input-row textarea{flex:1;resize:none;border:1.5px solid var(--navy);border-radius:3px;padding:11px 13px;
+  font-family:inherit;font-size:14px;line-height:1.5;min-height:46px;max-height:120px;}
+.ai-input-row textarea:focus{outline:2px solid var(--gold-soft);outline-offset:1px;}
+.ai-send-btn{border:none;background:var(--gold);color:#fff;border-radius:3px;padding:0 22px;font-weight:700;
+  cursor:pointer;font-family:inherit;font-size:14px;}
+.ai-send-btn:hover{filter:brightness(1.08);}
+.ai-send-btn:disabled{opacity:.45;cursor:not-allowed;}
+.ai-quick-row{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;}
+.ai-quick-chip{border:1px solid var(--line-2);background:var(--paper-2);border-radius:20px;padding:5px 12px;
+  font-size:11.5px;cursor:pointer;color:var(--navy);}
+.ai-quick-chip:hover{border-color:var(--gold);}
+.ai-typing{display:flex;gap:4px;padding:4px 0;}
+.ai-typing span{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:blink 1.2s infinite ease-in-out;}
+.ai-typing span:nth-child(2){animation-delay:.2s;}
+.ai-typing span:nth-child(3){animation-delay:.4s;}
+@keyframes blink{0%,80%,100%{opacity:.25;}40%{opacity:1;}}
+.ai-error{color:var(--coral);font-size:12.5px;background:var(--coral-soft);border-radius:3px;padding:8px 12px;}
+.ai-disclaimer{font-size:11px;color:var(--muted);margin-top:10px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="masthead">
+    <div class="seal"></div>
+    <div>
+      <h1>研發成果 AI 智慧導航查詢系統</h1>
+      <p>接到電話當下即可查 — 問 AI 小幫手，或用關鍵字／分類手動查詢</p>
+    </div>
+    <div class="tag">內部參考</div>
+  </div>
+
+  <div class="ai-zone">
+    <div class="ai-head">
+      <div class="ai-avatar">研</div>
+      <div>
+        <h2>AI 智能小幫手</h2>
+        <p>直接打字問問題，答案下方會附上法規依據與條文內容；涉及申辦流程或應備文件時會一併列出</p>
+      </div>
+    </div>
+    <div class="ai-log" id="aiLog"></div>
+    <div class="ai-input-row">
+      <textarea id="aiInput" placeholder="例如：股東配股要申請緩課稅，需要準備什麼文件？流程怎麼走？" rows="1"></textarea>
+      <button class="ai-send-btn" id="aiSendBtn">送出</button>
+    </div>
+    <div class="ai-quick-row" id="aiQuickRow"></div>
+    <div class="ai-disclaimer">AI 回答依「組織 FAQ 知識庫」與內建法規節錄整理，僅供內部參考；正式回覆仍請以法規原文與機關函釋為準。</div>
+  </div>
+
+  <div class="search-zone">
+    <div class="lbl">☎ 或用關鍵字快速篩選案例庫</div>
+    <div class="search-box">
+      <span class="ico">🔍</span>
+      <input type="text" id="searchInput" placeholder="輸入關鍵字，例如：股權、大陸地區、技轉收入、既有成果、讓與…">
+      <button id="clearBtn">清除</button>
+    </div>
+    <div class="scenario-row" id="scenarioRow"></div>
+  </div>
+
+  <div class="cat-row" id="catRow"></div>
+
+  <div class="grid">
+    <div>
+      <div class="result-meta" id="resultMeta"></div>
+      <div class="result-list" id="resultList"></div>
+    </div>
+
+    <div class="side-panel">
+      <h3>組織 FAQ 知識庫</h3>
+      <div class="cnt" id="kbCount">0</div>
+      <div class="cnt-lbl">已記錄之來電案例（持續累積）</div>
+      <div id="kbBars"></div>
+      <div class="log-list" id="kbLog"></div>
+      <div class="reset-link" id="kbReset">清除本示範累積紀錄</div>
+    </div>
+  </div>
+
+  <div class="foot-note">
+    法規全文查詢：<a href="https://law.nstc.gov.tw/LawCategoryMain.aspx" target="_blank" rel="noopener">國科會法規資料庫 law.nstc.gov.tw</a>
+    　｜　<a href="https://law.moj.gov.tw/" target="_blank" rel="noopener">全國法規資料庫（大陸地區條例等其他部會法規）</a>
+    　｜　內容依「國科會研發成果FAQ」與討論文件整理，僅供內部參考，正式回覆請以法規原文與機關函釋為準
+  </div>
+</div>
+
+<script>
+/* ============ DATA ============ */
+const FAQ_DB = [
+  {id:1, cat:"既有成果授權", q:"如何與國科會簽訂「研發成果授權推廣合約書」？",
+   a:"請至「科技研發成果資訊系統（STRIKE）」（國科會首頁 > 登入學術研發服務網 > 所有申辦作業 > STRIKE）首頁／合約範本項下，下載「國科會既有成果授權推廣合約書」，經機關用印後函送本會辦理。",
+   laws:["國科會STRIKE系統合約範本"], kw:["既有成果","授權推廣合約","簽約","STRIKE"]},
+  {id:2, cat:"既有成果授權", q:"如何辦理歸屬國科會之既有研發成果的技轉授權事宜？",
+   a:"經同意代為推廣之計畫執行機構，應：一、公開推廣研發成果（發表會、說明會或其他公開方式）；二、透過公平公開程序遴選授權廠商，並以國內廠商優先，僅於無承接意願、無承接能力、不影響國內競爭力或授權國外更有利於整體發展等情形，方得授權國外廠商；三、協商授權金、衍生利益金、授權範圍與年限等條件，商業營利以有償授權為原則，學術、教育或公益用途得專案申請無償授權。",
+   laws:[], kw:["既有成果","技轉授權","遴選廠商","有償授權","無償授權"]},
+  {id:3, cat:"既有成果授權", q:"技轉授權合約書送本會核備用印時，須一併提供哪些資料？",
+   a:"一、技術公開資料（公開遴選廠商相關證明）；二、技術作價資料（作價會議紀錄、權利金協商紀錄等）；三、廠商評選資料（決議文件或原因說明）；四、廠商證明文件（公司執照、登記證明等）；五、合約書（稿），協商完成後由計畫主持人、授權廠商及執行機構用印，再送本會用印完成簽約。",
+   laws:[], kw:["技轉授權","備查文件","合約用印"]},
+  {id:4, cat:"既有成果授權", q:"計畫執行機構是否可代為推廣歸屬於國科會的研發成果？",
+   a:"如屬本會核備之技轉專責單位，且已與本會簽訂「國科會研發成果授權推廣合約書」者，即可辦理歸屬本會既有成果之技轉授權事宜。",
+   laws:[], kw:["既有成果","代為推廣","技轉專責單位"]},
+  {id:5, cat:"既有成果授權", q:"既有成果推廣收入如何分配？",
+   a:"依「政府科學技術研究發展成果歸屬及運用辦法」第17條、第18條，及「國科會科學技術研究發展成果歸屬及運用辦法」第13條、第14條，計畫執行機構應將授權金、衍生利益金等所得收入，依身分別分配 20%（公立學研機構）或 40%（其他計畫執行機構）予本會，扣除後餘額依比率分配研發成果創作人及推廣有功人員。",
+   laws:["政府科學技術研究發展成果歸屬及運用辦法 第17條","政府科學技術研究發展成果歸屬及運用辦法 第18條","國科會科學技術研究發展成果歸屬及運用辦法 第13條","國科會科學技術研究發展成果歸屬及運用辦法 第14條"],
+   kw:["收入分配","20%","40%","衍生利益金","既有成果"]},
+  {id:6, cat:"成果管理運用", q:"研發成果讓與、終止維護是否須經國科會審查同意？",
+   a:"「授權」（含專屬、非專屬）不須本會審查，由執行機構依規定自行評估辦理；「讓與」與「終止維護」則須經本會審查同意，需完成公開推廣一定合理期間、內部評估程序及公告周知等程序要件，隨到隨審，審查時間約2至4個月。若執行機構已建構完備管理機制並有技轉實績，得申請1至5年之「通案授權」，期間內無須逐案審查，僅需報部備查。",
+   laws:["國科會科學技術研究發展成果歸屬及運用辦法 第11條","國科會科學技術研究發展成果歸屬及運用辦法 第12條","國科會科學技術研究發展成果歸屬及運用辦法 第16條","國科會科學技術研究發展成果歸屬及運用辦法 第17條","國科會科學技術研究發展成果歸屬及運用辦法 第18條"],
+   kw:["讓與","終止維護","通案授權","審查同意","成果管理"]},
+  {id:7, cat:"通案授權", q:"如何申請「通案授權」辦理研發成果讓與及終止維護？",
+   a:"依辦法第18條，建置完備管理機制且有本會成果技轉實績者，得申請1至5年通案授權期間，逕依第16條或第17條辦理讓與、終止維護後報部備查。首次申請隨到隨審約3個月；續約應於期限屆滿前3個月提出；本會將於期限屆滿前6個月安排實地查核。",
+   laws:["國科會科學技術研究發展成果歸屬及運用辦法 第4條","國科會科學技術研究發展成果歸屬及運用辦法 第5條","國科會科學技術研究發展成果歸屬及運用辦法 第18條"],
+   kw:["通案授權","實地查核","管理機制"]},
+  {id:8, cat:"成果管理運用", q:"研發成果之資訊管理系統為何？",
+   a:"應切實登錄「科技研發成果資訊系統（STRIKE）」，功能包含：研發成果與專利資料登錄管理、技轉合約與收入登錄管理、獎補助申請管理、資料查詢匯出，以及法規與申請文件下載。",
+   laws:[], kw:["STRIKE","資訊系統","登錄管理"]},
+  {id:9, cat:"大陸地區", q:"研發成果授權或讓與大陸地區廠商，或於大陸地區實施，該如何處理？",
+   a:"須符合下列要件之一：國內無承接意願、國內無承接能力、不影響國內廠商競爭力及技術發展、授權國外對象更有利國家整體發展。並依經濟部「在大陸地區從事投資或技術合作許可辦法」，應先向投審會申請許可（個案累計金額在公告限額以下者得以申報方式為之）；讓與合約應載明受讓廠商如涉及該辦法審查事項，應向投審會申請許可，並留意避免與競爭國廠商之關係。",
+   laws:["國科會科學技術研究發展成果歸屬及運用辦法 第12條","在大陸地區從事投資或技術合作許可辦法 第7條"],
+   kw:["大陸地區","投審會","技術合作許可","國家核心科技"]},
+  {id:10, cat:"成果管理運用", q:"研發成果績效表現與獲得本會補助或獎勵是否有關？",
+   a:"各項成果績效（含專利、著作權等智慧財產權、技術移轉、論文發表等）及相關管理機制，係本會獎補助審查之重要指標與考核項目，計畫主持人及執行機構均應依規定切實填報並詳實登錄於學術研發服務網及STRIKE系統。",
+   laws:[], kw:["績效","獎補助","考核指標"]},
+  {id:11, cat:"技轉收入", q:"計畫執行機構管理或運用研發成果所獲得收入，分配原則為何？",
+   a:"執行機構應將所得收入（不含稅、不得扣除成本）依身分別提撥 20%（公私立學校、公立研究機關）或 40%（其他執行機構）上繳行政院科發基金；扣除上繳數額後，餘額依一定比率分配創作人／發明人及推廣有功人員，分配比率由各執行機構自訂；股權與現金收入應分別依比率計算上繳。",
+   laws:["科學技術基本法","國科會科學技術研究發展成果歸屬及運用辦法"],
+   kw:["技轉收入","分配原則","上繳","科發基金","20%","40%"]},
+  {id:12, cat:"技轉收入", q:"計畫之共同主持人，可否與總主持人共同分配技轉等研發成果收入？",
+   a:"執行機構得依研發成果之貢獻度，由各技術貢獻者（主持人、共同主持人等）協商訂定收入分配比例並簽署同意書，共同主持人及學生亦得視實際參與情形列為合約當事人，共同分配收入。",
+   laws:[], kw:["共同主持人","收入分配","技轉"]},
+  {id:13, cat:"技轉收入", q:"研發成果收入為股權時，應如何繳交本會？",
+   a:"已發行無實體股票者，應劃撥至「行政院國家科學技術發展基金」有價證券保管劃撥帳戶；已發行實體股票或未發行股票者，應檢附技轉合約明細表、股權轉讓證明、過戶申請書及擬繳交股權，函請本會用印；股權證明書應載明股東為「行政院國家科學技術發展基金」、公司全名、代表人、統一編號、每股金額、持股數及核發日期，並經公司及代表人用印，最後以公文檢附相關證明函報本會。",
+   laws:["國科會科學技術研究發展成果歸屬及運用辦法"], kw:["股權","持股比例","過戶","股權轉讓","技轉收入"]},
+  {id:14, cat:"緩課擇低課稅", q:"創作人緩課暨擇低課稅，有提供哪些相關法規或流程參考？",
+   a:"可至本會「科研成果法規鬆綁專區」（國科會首頁 > 資訊及資料公開 > 政府資訊開放 > 科研成果法規鬆綁專區）查詢相關法規及流程。",
+   laws:["科研成果法規鬆綁專區（nstc.gov.tw）"], kw:["緩課","擇低課稅","創作人","法規鬆綁"]},
+  {id:15, cat:"歸屬判定", q:"如何判別國科會補助計畫研發成果之歸屬？",
+   a:"自88年1月22日科學技術基本法公布施行後，原則歸屬計畫執行機構。判定方式：補助年度87年以前者歸屬本會；88年者依核定會期區分（1277次業務會報前歸屬本會，1278次後一般計畫下放執行機構、舊產學計畫仍歸屬本會）；89年之後補助案件則一律歸屬計畫執行機構。",
+   laws:["科學技術基本法"], kw:["歸屬判定","88年","89年","下放","科學技術基本法"]},
+  {id:16, cat:"歸屬判定", q:"計畫主持人可以將下放後之研發成果歸屬於教授個人嗎？",
+   a:"不可以。下放後研發成果歸屬計畫執行機構，不得由主持人個人持有；主持人可協助專利申請、成果推廣及技術移轉，並依機構規定分配部分收入或申請相關獎補助。如欲自行運用研發成果，須依辦法第11條由執行機構評估更能符合科技基本法宗旨者，方能例外以授權或讓與方式辦理。",
+   laws:["國科會科學技術研究發展成果歸屬及運用辦法 第11條"], kw:["歸屬判定","個人持有","下放","第11條"]},
+  {id:17, cat:"歸屬判定", q:"執行國科會補助研究計畫所獲得之專利，其專利權應如何認定？教授可自行持有嗎？",
+   a:"科學技術基本法公布施行後，補助計畫所產出之國內外專利權、商標權、營業秘密、電路布局權、著作權等智慧財產權及成果，原則歸屬計畫執行機構所有，並負管理、運用及推廣之責；個人原則上不得持有政府補助、委託或出資計畫之研發成果，相關成果均應循執行機構行政程序及管理機制處理。",
+   laws:["科學技術基本法"], kw:["專利權","教授持有","歸屬判定"]},
+  {id:18, cat:"產學合作", q:"產學合作計畫之研發成果，其歸屬應如何認定？",
+   a:"產學合作計畫所獲研發成果，屬本會補助部分，除經本會認定歸屬本會者外，全部歸屬計畫執行機構所有（詳經費核定清單研究成果歸屬欄）；申請專利、技術移轉、授權及權益分配由執行機構依法令處理，合作企業不得拒絕並應配合協助。屬合作企業出資部分，由執行機構與企業依相關法令商議約定。",
+   laws:[], kw:["產學合作","成果歸屬","出資部分"]},
+  {id:19, cat:"產學合作", q:"產學合作計畫所產出之研發成果，可否歸屬於教授個人？",
+   a:"不可以。本會補助產學合作研究計畫所獲成果，除經本會認定歸屬本會者外，全部歸屬產學計畫執行機構所有，詳見本會補助產學合作研究計畫作業要點第16點規定。",
+   laws:["本會補助產學合作研究計畫作業要點 第16點"], kw:["產學合作","教授個人","歸屬"]},
+  {id:20, cat:"產學合作", q:"計畫主持人於產學計畫執行期間變更計畫執行機構，其研發成果歸屬事宜應如何處理？",
+   a:"依作業要點第16點第5項，主持人於產學合作計畫執行期間變更所屬機構時，研發成果之歸屬、管理及運用等事項，由變更前、後機構、主持人及合作企業自行協調，並由執行機構函報本會同意後辦理。",
+   laws:["本會補助產學合作研究計畫作業要點 第16點第5項"], kw:["產學合作","變更機構","歸屬事宜"]},
+  {id:21, cat:"產學合作", q:"產學計畫執行完畢後，若合作企業未簽先期技轉合約也未談妥後續技轉，可否逕行製造或生產該技術？",
+   a:"不行。合作企業如未簽訂先期技轉合約或未依規定完成技轉程序，即無使用該技術或成果之權限。",
+   laws:[], kw:["產學合作","先期技轉合約","未簽約"]},
+
+  /* ===== 緩課暨擇低課稅 Q&A（依「我國研發成果創作人股票適用緩課擇低所得稅申請相關說明」整理）===== */
+  {id:22, cat:"緩課擇低課稅", q:"緩課稅與擇低課稅的適用期間如何認定？",
+   a:"學研機構技轉取得股票日及創作人獲配股票日均須落在106年11月24日至118年12月31日期間內，並於該期間內提出申請。",
+   laws:["產業創新條例 第12條之2","我國學術或研究機構分配股票予我國創作人申請股票適用緩課所得稅作業辦法"],
+   kw:["緩課","擇低課稅","申請期間","106年","118年"]},
+  {id:23, cat:"緩課擇低課稅", q:"109年1月1日前已申請緩課稅、尚未處分股票之案件，是否可再申請擇低課稅？",
+   a:"可以。109年1月1日前已申請緩課稅但尚未處分股票之案件，仍可另行申請適用擇低課稅。",
+   laws:[], kw:["緩課","擇低課稅","109年"]},
+  {id:24, cat:"緩課擇低課稅", q:"以Know-how技術作價取得之股票，是否適用緩課稅？",
+   a:"依產業創新條例第12條之2第1項，學研機構將執行政府科技計畫之研發成果股票收入分配予創作人，創作人享有緩課稅優惠；若Know-how係學研機構執行政府科技計畫所產出，仍得適用緩課稅規定，惟應於申請時檢具足資證明該Know-how為科技計畫產出之文件。",
+   laws:["產業創新條例 第12條之2第1項","我國學術或研究機構分配股票予我國創作人申請股票適用緩課所得稅作業辦法 第5條"],
+   kw:["Know-how","技術作價","緩課稅"]},
+  {id:25, cat:"緩課擇低課稅", q:"緩課稅應由誰、向誰提出申請？",
+   a:"由分配股票之學研機構提出申請，向科學技術基本法第6條第3項所定辦法之各主管機關（資助機關）提出申請。",
+   laws:["科學技術基本法 第6條第3項"], kw:["緩課稅","申請機關","學研機構"]},
+  {id:26, cat:"緩課擇低課稅", q:"申請緩課稅應準備哪些文件？",
+   a:"應備妥：一、科技計畫之計畫書、合約或核定函；二、足資證明智慧財產權為科技計畫產出之文件；三、智慧財產權讓與或授權契約書影本（應載明作價總額、取得股票種類、每股發行價格及股數）；四、權利證書影本，或律師、會計師等專業人員出具之調查意見書、評價報告、技術說明等文件擇一。",
+   laws:[], kw:["緩課稅","申請文件","契約書"]},
+  {id:27, cat:"緩課擇低課稅", q:"擇低課稅應由誰、向誰提出申請？",
+   a:"由創作人提出申請，並請任職機構函送受理機關；受理機關同為科學技術基本法第6條第3項所定辦法之各主管機關（資助機關）。",
+   laws:["科學技術基本法 第6條第3項"], kw:["擇低課稅","申請人","創作人"]},
+  {id:28, cat:"緩課擇低課稅", q:"申請擇低課稅應準備哪些文件？",
+   a:"應備妥足資證明從事研發之文件（如專利申請書、專利證書、政府科技計畫結案報告書、研究紀錄簿等）、工作起訖日期之文件，並可參考國科會提供之從事研發證明書格式（見國科會網站folksonomy頁面附加檔案）。",
+   laws:[], kw:["擇低課稅","申請文件","從事研發證明書"]},
+  {id:29, cat:"緩課擇低課稅", q:"學研機構取得股票日、創作人獲配股票日之時點如何判斷？",
+   a:"實體股票：以股票發行公司印製股票所載發行日期為準，非新發行股票者以過戶申請書所載日期為準。無實體股票：以其於證券集中保管事業機構登錄之交付日期或存摺所載轉帳日期為準。未發行股票：以公司變更登記核准函之發文日期為準，非發行新股者以股權過戶證明所載日期為準。",
+   laws:[], kw:["取得股票日","獲配股票日","實體股票","無實體股票"]},
+  {id:30, cat:"緩課擇低課稅", q:"什麼時候可以申請緩課稅？文件不齊可否補正？",
+   a:"應於學研機構研發成果技轉取得股票分配予創作人之當年度12月31日前提出申請。申請文件如僅智慧財產權讓與或授權契約書欠缺、或該契約應載明事項不全，得予補正。",
+   laws:[], kw:["緩課稅","申請時點","補正"]},
+  {id:31, cat:"緩課擇低課稅", q:"什麼時候可以申請擇低課稅？文件不齊可否補正？",
+   a:"創作人須自取得學研機構分配股票日起持續持有股票，且於我國境內產業、學術或研究機構服務並從事研發屆滿二年，並應於創作人處分股票前提出申請。擇低課稅之申請文件不符規定者，不得補正。",
+   laws:[], kw:["擇低課稅","申請時點","不得補正"]},
+  {id:32, cat:"緩課擇低課稅", q:"從事研發證明書可否於服務屆滿2年當日先行開立？",
+   a:"可以。依產業創新條例第12條之2第2項及「我國學術或研究機構分配股票予我國創作人申請股票適用緩課所得稅作業辦法」第6條規定，從事研發證明書於創作人從事研發屆滿2年之日起即得先行開立。",
+   laws:["產業創新條例 第12條之2第2項","我國學術或研究機構分配股票予我國創作人申請股票適用緩課所得稅作業辦法 第6條"],
+   kw:["從事研發證明書","屆滿2年"]},
+  {id:33, cat:"緩課擇低課稅", q:"創作人處分股票時有哪些應注意事項？",
+   a:"創作人應於處分股票前，檢具由主管機關核發之擇低課稅認定函影本，至股票發行公司辦理股票轉讓程序。",
+   laws:[], kw:["股權處分","處分股票","擇低課稅認定函"]},
+  {id:34, cat:"緩課擇低課稅", q:"新創公司股票（未上市未上櫃且未登錄興櫃）於擇低課稅時之「時價」如何認定？",
+   a:"上市、上櫃股票：以取得日／處分日之收盤價格認定。興櫃股票：以取得日／處分日之加權平均成交價格認定。未上市、未上櫃且未登錄興櫃股票：以取得日／處分日前1年內最近一期經會計師查核簽證財務報告之每股淨值認定；若該日前一年內無經會計師查核簽證之財務報告，則以該日公司資產淨值核算之每股淨值認定。",
+   laws:[], kw:["時價","未上市","淨值","股權"]},
+  {id:35, cat:"緩課擇低課稅", q:"創作人將已申請緩課稅之股票轉讓至本人海外帳戶，是否需課徵所得稅？",
+   a:"依產業創新條例第12條之2規定，申請緩課稅後，須待股票實際轉讓或帳簿劃撥至開設之有價證券保管劃撥帳戶，且股份所有權有變更之情形，始需課徵所得稅；單純轉帳而所有權未變更者不在此限。",
+   laws:["產業創新條例 第12條之2"], kw:["海外帳戶","轉讓","課徵所得稅"]},
+  {id:36, cat:"緩課擇低課稅", q:"取得研發成果分配股票，是否應繳交全民健保補充保費？",
+   a:"屬全民健康保險第1類至第4類及第6類保險對象，且符合全民健康保險法第31條規定者，應於取得股票時依規定之補充保險費率計收補充保險費，由分配股票之學研機構申報。",
+   laws:["全民健康保險法 第31條"], kw:["健保補充保費","全民健保"]},
+  {id:37, cat:"緩課擇低課稅", q:"已取得緩課稅資格後，股票發行公司異動股數，可否申請緩課稅股數變更？",
+   a:"可以，前提為股數異動後，創作人取得之新股數與原始取得股票之總時價不變，且創作人尚未轉讓股票。應由學研機構及創作人向資助機關申請變更，並備妥：原緩課稅認定之函文及用印申請書、公司已異動股數之經濟部變更登記核准函與登記表，以及股數異動後創作人新取得股票（權）之持有證明（無實體發行檢附集保存摺或帳簿劃撥通知單；實體發行檢附換發股票憑單；未公開發行檢附股權證明書）。",
+   laws:[], kw:["股數變更","緩課稅變更","異動股數"]},
+
+  /* ===== 管理查核重點（依「國科會研發成果管理項目案例」整理）===== */
+  {id:38, cat:"管理查核重點", q:"研發成果之維護及終止維護，查核重點與常見問題為何？",
+   a:"需檢核學研機構是否將成果記錄管理、是否定期盤點成果，以及辦理維護及終止維護是否遵循規範程序。常見問題為成果未定期盤點即逕行終止維護，或終止維護程序在兩階段規範中有所瑕疵。正確處理方式：應完成並接續讓與程序要件，公告周知逾3個月無人請求讓與後，內部進行終止維護評估程序，執行機構備函檢具申請清單、申請表及終止維護管理機制佐證文件，向本會申請終止維護；申請日須距年費到期日1.5年以內。",
+   laws:["國科會科學技術研究發展成果歸屬及運用辦法 第4條"], kw:["維護管理","終止維護","盤點","年費"]},
+  {id:39, cat:"管理查核重點", q:"研發成果授權作業，查核重點與常見問題為何？",
+   a:"需檢核是否符合公平、公開、有償原則；公開方式及公開期間無特定要求，以學校網站或技術平台公告等方式皆符合公開原則。常見問題為授權審議評估日期早於成果公告時間。正確處理方式：機構應先將預計授權之成果公告，供廠商聯繫、洽談，協議後再經機構審議是否授權。",
+   laws:["國科會科學技術研究發展成果歸屬及運用辦法 第11條","國科會科學技術研究發展成果歸屬及運用辦法 第12條"],
+   kw:["授權","公開公告","有償原則"]},
+  {id:40, cat:"管理查核重點", q:"研發成果讓與作業，查核重點與常見問題為何？",
+   a:"需檢核是否已完成「成果評估無授權使用或技術服務效益」及讓與公告程序。常見問題為未經評估便辦理讓與公告，或讓與審議評估日期早於成果公告時間。正確處理方式：機構應先評估成果確無授權使用或技術服務效益後，再辦理公告讓與，供廠商申請、洽談，協議後經機構審議是否讓與。",
+   laws:["國科會科學技術研究發展成果歸屬及運用辦法 第11條","國科會科學技術研究發展成果歸屬及運用辦法 第16條"],
+   kw:["讓與","公告讓與","成果評估"]},
+  {id:41, cat:"大陸地區", q:"機構與大陸地區廠商辦理技術移轉，申請順序及注意事項為何？",
+   a:"機構申請與大陸地區廠商技術移轉時，需檢附經濟部同意文件。申請順序應先向經濟部申請同意後，再向國科會申請；機構內部應先依國科會成果運用程序辦理公告、評估等程序後，再審議該技術移轉。技術授權辦理完成後應上繳收益至國科會；技術讓與辦理則須向國科會申請或通報。",
+   laws:["國科會科學技術研究發展成果歸屬及運用辦法 第11條","國科會科學技術研究發展成果歸屬及運用辦法 第16條","大陸地區人民來臺投資許可辦法","在大陸地區從事投資或技術合作許可辦法"],
+   kw:["大陸地區","技術移轉","經濟部同意","申請順序"]},
+  {id:42, cat:"管理查核重點", q:"研發成果利益衝突迴避及資訊揭露，查核重點與常見問題為何？",
+   a:"需檢核創作人是否主動揭露有無利益衝突，以及創作人雖可參與成果之推廣與洽談，但應迴避該案件之審議或核決。常見問題為創作人未主動揭露，僅以口頭方式告知。",
+   laws:["國科會科學技術研究發展成果歸屬及運用辦法 第5條","國科會科學技術研究發展成果歸屬及運用辦法 第7條","國科會科學技術研究發展成果歸屬及運用辦法 第8條","國科會科學技術研究發展成果歸屬及運用辦法 第9條"],
+   kw:["利益衝突","迴避","資訊揭露"]},
+  {id:43, cat:"管理查核重點", q:"研發成果相關文件與資訊，應如何落實保密措施？",
+   a:"應要求研發成果相關人員簽署保密協議文件，並針對實體文件與電子檔案訂定保密管理措施：實體文件應有專屬收納櫃、專人負責上鎖管理，文件調閱應有調閱管制作業程序；電子檔案應有專屬伺服器管理、設有密碼，傳輸時應遵循資安作業規定。常見缺失為僅要求創作人簽署保密文件，卻未就相關文件及電子檔案訂定保密管理措施。",
+   laws:["國科會科學技術研究發展成果歸屬及運用辦法 第4條"], kw:["文件保管","保密協議","資安"]},
+  {id:44, cat:"管理查核重點", q:"研發成果收入之會計處理，查核重點與常見問題為何？",
+   a:"需檢核是否單獨列帳管理研發成果收入及支出，以及收入是否依比率上繳：公私立學校、公立研究機關（構）20%，其他單位40%。常見問題為研發成果收入與支出未單獨列會計科目管理，或上繳比率未明確訂定於機構法規或內控作業程序文件中。",
+   laws:["國科會科學技術研究發展成果歸屬及運用辦法 第4條","國科會科學技術研究發展成果歸屬及運用辦法 第13條"],
+   kw:["會計處理","單獨列帳","上繳比率","20%","40%"]},
+  {id:45, cat:"管理查核重點", q:"研發成果股權處分管理，查核重點與常見誤解為何？",
+   a:"需檢核學研機構是否訂定處分股權之價格、時點等評估程序，可參考國科會107年12月18日發布之「科學技術研究發展成果股權處分管理機制參考原則」訂定相關規範。常見誤解是將技轉案收入股權誤認為股權處分——股權處分係指將既有股權賣出，與技轉收入取得股權為不同概念，承辦人員應明確區分。",
+   laws:["國科會科學技術研究發展成果歸屬及運用辦法 第4條","科學技術研究發展成果股權處分管理機制參考原則"],
+   kw:["股權處分","股權處分管理機制參考原則","技轉股權"]},
+
+  /* ===== 大陸地區法規補充（依「臺灣地區與大陸地區人民關係條例」「在大陸地區從事投資或技術合作許可辦法」整理）===== */
+  {id:46, cat:"大陸地區", q:"何謂「國家核心關鍵技術」？相關人員赴大陸地區有何限制？",
+   a:"受政府機關（構）委託、補助或出資達一定基準，從事涉及國家核心關鍵技術業務之個人、法人、團體或其他機構成員，進入大陸地區應經申請，並經內政部會同國安局、法務部、大陸委員會及相關機關組成之審查會審查許可；受委託、補助、出資終止或離職未滿3年者亦同。國家核心關鍵技術之範圍，依國家安全法第3條第3項所定認定。",
+   laws:["臺灣地區與大陸地區人民關係條例 第9條第4項第6款","臺灣地區與大陸地區人民關係條例 第9條第11項"],
+   kw:["國家核心關鍵技術","赴大陸地區","審查會"]},
+  {id:47, cat:"大陸地區", q:"在大陸地區從事投資或技術合作，主管機關及許可原則為何？",
+   a:"臺灣地區人民、法人、團體或其他機構，經經濟部許可，得在大陸地區從事投資或技術合作；其投資或技術合作之產品或經營項目，依國家安全及產業發展之考慮，區分為禁止類及一般類，由經濟部會商有關機關訂定項目清單及個案審查原則並公告。一定金額以下之投資，得以申報方式為之，其限額由經濟部以命令公告之。",
+   laws:["臺灣地區與大陸地區人民關係條例 第35條","在大陸地區從事投資或技術合作許可辦法 第3條","在大陸地區從事投資或技術合作許可辦法 第6條"],
+   kw:["投資","技術合作","經濟部許可","禁止類","一般類"]},
+  {id:48, cat:"大陸地區", q:"經許可在大陸地區從事投資或技術合作後，有哪些後續報備義務？",
+   a:"經許可在大陸地區從事投資者，應於開始實行後6個月內，檢具實行投資證明文件、投資事業設立登記證明或營業執照、股東名冊或持股證明等文件報請主管機關備查，並按時填報投資事業營運狀況調查表；累計投資金額達一定金額以上者，應按季提報投資計畫執行情形，並於每年度終了5個月內提報年度執行情形及經會計師簽證之財務報表。技術合作者，應於開始實行後6個月內報備技術合作開始日期；出資或技術合作轉讓、中止、股本或盈餘匯回，亦均應於一定期限內向主管機關報備。",
+   laws:["在大陸地區從事投資或技術合作許可辦法 第8條","在大陸地區從事投資或技術合作許可辦法 第9條","在大陸地區從事投資或技術合作許可辦法 第10條"],
+   kw:["投資報備","技術合作報備","財務報表"]},
+];
+
+const CATS = [...new Set(FAQ_DB.map(f=>f.cat))];
+
+/* ============ 法規全文節錄語料庫（供 AI 小幫手引用條文，避免憑空捏造）============
+   僅收錄「已取得完整條文」之法規；國科會科學技術研究發展成果歸屬及運用辦法等
+   FAQ 中僅有條號、無完整條文來源者，AI 只能引用條號並提示查閱全文，不得杜撰內容。 */
+const LAW_CORPUS = `
+【在大陸地區從事投資或技術合作許可辦法】（經濟部主管，民國113年08月08日修正）
+第1條　本辦法依臺灣地區與大陸地區人民關係條例第三十五條第四項規定訂定之。
+第2條　本辦法之主管機關為經濟部。
+第3條　在大陸地區從事投資，指臺灣地區人民、法人、團體或其他機構在大陸地區有下列行為之一：一、創設新公司或事業。二、對當地原有之公司或事業增資。三、取得當地現有公司或事業之股權（不包括購買上市公司股票）。四、設置或擴展分公司或事業。直接或間接投資第三地區公司或事業並擔任董監經理人或持股逾10%，而該公司或事業有前述行為者，亦屬本辦法所稱投資。
+第4條　技術合作，指直接或間接轉讓或授權專門技術、專利權或電腦程式著作財產權與大陸地區人民、法人、團體或其他機構。曾經主管機關關鍵技術小組審查通過並許可之投資案，其轉讓出資予大陸地區對象者，視為技術合作。
+第5條　在大陸地區從事投資，其出資種類以下列為限：一、現金。二、機器設備、零配件。三、原料、半成品或成品。四、專門技術、專利權、商標專用權或著作財產權。五、其他經主管機關認可投資之財產。
+第6條　應先備具申請書件向主管機關申請許可；個案累計投資金額在主管機關公告限額以下者，得以申報方式為之。
+第7條　未經申報或許可而從事投資或技術合作，經主管機關依本條例第八十六條處以罰鍰並限期命其停止或改正者，受處分人應於期限內將停止或改正情形報請備查。
+第8條　經許可從事投資者，應於開始實行後六個月內，檢具實行投資證明文件、投資事業設立登記證明或營業執照、股東名冊或持股證明文件等，報請主管機關備查，並按時填報投資事業營運狀況調查表；以申報方式投資者亦同。經許可從事技術合作者，應於開始實行後六個月內，檢具相關文件向主管機關報備技術合作開始日期。累計投資金額達主管機關所定金額以上者，應按季提報投資計畫執行情形，並於每一營業年度終了五個月內提報年度執行情形及經會計師簽證之財務報表。
+第9條　經申報或許可之出資或技術合作，其轉讓應於轉讓後二個月內向主管機關報備；受讓人為臺灣地區人民、法人、團體或其他機構者，應依第六條及第八條規定申請許可或申報。
+第10條　經申報或許可從事投資或技術合作，於實行後因故中止者，應於中止後二個月內向主管機關報備；投資事業之股本或盈餘匯回者，應於匯回後一個月內檢附相關證明文件報備。
+第11條　經許可從事投資或技術合作，於核定實行期限內尚未實行者，期限屆滿時其許可失效；已實行而未能於期限內完成投資計畫者，其未完成部分之許可於期限屆滿時失效；如有正當理由，得於期限屆滿前申請核准延展。
+第12條　申請事項有虛偽記載或提供不實文件者，主管機關得撤銷許可。
+第13條　違反第八條第一項、第三項、第五項、第九條第一項或第十條第一項規定者，主管機關得廢止許可，並限期命其將資金匯回。
+第14條　本辦法自發布日施行。
+
+【臺灣地區與大陸地區人民關係條例】（節錄與研發成果、大陸地區技術合作相關條文）
+第9條第4項第6款　臺灣地區人民具有下列身分者，進入大陸地區應經申請，並經內政部會同國家安全局、法務部、大陸委員會及相關機關組成之審查會審查許可：……六、受政府機關（構）委託、補助或出資達一定基準從事涉及國家核心關鍵技術業務之個人或法人、團體、其他機構之成員；受委託、補助、出資終止或離職未滿三年者，亦同。
+第9條第11項　本條例所稱國家核心關鍵技術，指國家安全法第三條第三項所定之國家核心關鍵技術。
+第9條第13項　第四項第六款所定受委託、補助或出資之一定基準及其他應遵行事項之辦法，由國家科學及技術委員會會商有關機關定之。
+第35條第1項　臺灣地區人民、法人、團體或其他機構，經經濟部許可，得在大陸地區從事投資或技術合作；其投資或技術合作之產品或經營項目，依據國家安全及產業發展之考慮，區分為禁止類及一般類，由經濟部會商有關機關訂定項目清單及個案審查原則，並公告之。但一定金額以下之投資，得以申報方式為之；其限額由經濟部以命令公告之。
+第35條第2項　臺灣地區人民、法人、團體或其他機構，得與大陸地區人民、法人、團體或其他機構從事商業行為。但由經濟部會商有關機關公告應經許可或禁止之項目，應依規定辦理。
+
+【國科會補助產學合作研究計畫作業要點】（節錄）
+第13點　合作企業配合款之總和不得低於當年度計畫總經費百分之二十五之金額，且不得低於二十五萬元（合作企業為二家以上者，各家配合款不得低於當年度計畫總經費百分之十二點五）。合作企業得與計畫執行機構協商繳交先期技轉授權金，其額度不得低於計畫總經費百分之八，配合款總和得放寬至不低於百分之二十，惟配合款與先期技轉授權金合計仍不得低於二十五萬元。繳交先期技轉授權金者，自簽約日起給予至多三年本計畫研發成果之授權；額度達計畫總經費百分之十五以上者，給予至多七年授權。人文領域計畫之比率降為百分之二十（配合款不得低於二十萬元），繳交先期技轉授權金者放寬至不低於百分之十五。
+第16點　本產學合作計畫所獲得之研發成果，屬本會補助之部分，除經本會認定歸屬本會所有者外，全部歸屬計畫執行機構所有；屬合作企業出資部分，由計畫執行機構與合作企業依相關法令規定商議約定之。研發成果由執行機構與合作企業共有時，應以書面約定由執行機構辦理授權。執行機構運用研發成果所獲收入分配給執行機構之比率，以不低於本會補助本計畫之出資比率為原則。計畫主持人於計畫執行期間變更所屬機構時，研發成果之歸屬、管理及運用等事項，由變更前後機構、主持人及合作企業自行協調，並由執行機構函報本會同意後辦理。
+
+【國科會補助前瞻技術產學合作計畫作業要點】（節錄）
+第17點　計畫執行所獲得之研發成果，屬於本會出資部分所應得者，除經本會認定歸屬本會所有者外，全部歸屬申請機構所有；屬合作企業出資部分，由申請機構與合作企業依科學技術基本法、政府科學技術研究發展成果歸屬及運用辦法及其他相關法令規定商議約定之。研發成果歸屬申請機構所有之部分，合作企業於計畫結束後一年內，有優先協商授權或讓與之權利。研發成果之財產權由申請機構與合作企業共有時，應以書面約定共有年限及相關權利義務。運用研發成果所獲得之收入分配予申請機構之比率，依政府科學技術研究發展成果歸屬及運用辦法規定。
+
+【國科會補助科普產品製播推廣產學合作計畫作業要點】（節錄）
+第16點　科普成果屬本會補助之部分，除經本會認定歸屬本會所有者外，全部歸屬申請機構所有；屬科普合作企業出資部分，屬科普合作企業所有，但本會享有因教育或公益用途之無償使用、重製及建檔之權利。科普成果由申請機構及科普合作企業共負管理及推廣運用之責者，推廣運用所獲收入分配給申請機構之比率，以不低於本會補助本計畫之出資比率為原則。
+
+【提醒】以上為系統已收錄之法規全文節錄。凡答案中引用「國科會科學技術研究發展成果歸屬及運用辦法」等未列於本語料庫之條文，僅能標示條號與既有摘要說明（依知識庫內容），不得自行編造條文逐字內容，並應建議使用者至 law.nstc.gov.tw 或 law.moj.gov.tw 查閱正式全文。
+`.trim();
+
+const SCENARIOS = [
+  {label:"詢問既有成果技轉授權", seed:"既有成果 技轉授權"},
+  {label:"技轉收入是股權，如何繳交？", seed:"股權 技轉收入"},
+  {label:"想授權技術給大陸地區廠商", seed:"大陸地區 授權"},
+  {label:"研發成果可否歸屬教授個人？", seed:"歸屬 教授個人"},
+  {label:"研發成果要辦理讓與或終止維護", seed:"讓與 終止維護"},
+  {label:"創作人配股，緩課稅怎麼申請？", seed:"緩課稅 申請"},
+  {label:"股票滿2年要賣，擇低課稅時價怎麼算？", seed:"擇低課稅 時價"},
+  {label:"研發成果稽核／查核常見缺失有哪些？", seed:"查核重點 常見問題"},
+];
+
+/* ============ STATE ============ */
+let state = { query:"", activeCat:"全部", openId:null, loggedIds:new Set() };
+
+/* ============ STORAGE ============ */
+const KB_KEY = "org_faq_call_log";
+let kbCache = [];
+async function loadKB(){
+  try{ const res = await window.storage.get(KB_KEY, true); kbCache = res && res.value ? JSON.parse(res.value) : []; }
+  catch(e){ kbCache = []; }
+  renderKB();
+}
+async function saveKB(){ try{ await window.storage.set(KB_KEY, JSON.stringify(kbCache), true); }catch(e){} }
+async function addToKB(item){
+  kbCache.unshift({cat:item.cat, q:item.q, time:new Date().toISOString().slice(0,16).replace('T',' ')});
+  state.loggedIds.add(item.id);
+  await saveKB();
+  renderKB();
+}
+async function resetKB(){ kbCache=[]; state.loggedIds=new Set(); await saveKB(); renderKB(); renderResults(); }
+
+function renderKB(){
+  document.getElementById('kbCount').textContent = kbCache.length;
+  const barsEl = document.getElementById('kbBars');
+  if(kbCache.length===0){
+    barsEl.innerHTML = '<div class="side-empty">尚無累積紀錄，查到解答後可點「加入知識庫」記錄本次來電。</div>';
+  } else {
+    const counts = {};
+    kbCache.forEach(k=>{ counts[k.cat]=(counts[k.cat]||0)+1; });
+    const max = Math.max(...Object.values(counts));
+    barsEl.innerHTML = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([cat,c])=>`
+      <div class="bar-row"><div class="bh"><span>${cat}</span><span>${c}</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(c/max*100).toFixed(0)}%"></div></div></div>`).join('');
+  }
+  document.getElementById('kbLog').innerHTML = kbCache.slice(0,14).map(k=>
+    `<div class="log-item"><div class="t">${k.time}</div><span class="c">［${k.cat}］</span>${k.q}</div>`).join('');
+}
+document.getElementById('kbReset').addEventListener('click', ()=>{
+  if(confirm('確定要清除本示範的累積紀錄嗎？此資料為共用示範資料，清除後所有人皆會看到空白狀態。')) resetKB();
+});
+
+/* ============ SEARCH / FILTER ============ */
+function scoreItem(item, query){
+  if(!query.trim()) return 1;
+  const terms = query.trim().split(/\s+/).filter(Boolean);
+  let score = 0;
+  terms.forEach(t=>{
+    if(item.q.includes(t)) score += 3;
+    if(item.cat.includes(t)) score += 3;
+    if(item.kw.some(k=>k.includes(t)||t.includes(k))) score += 2;
+    if(item.a.includes(t)) score += 1;
+  });
+  return score;
+}
+function getFiltered(){
+  return FAQ_DB
+    .map(item=>({item, score:scoreItem(item, state.query)}))
+    .filter(x=> x.score>0 && (state.activeCat==="全部" || x.item.cat===state.activeCat))
+    .sort((a,b)=>b.score-a.score);
+}
+
+/* ============ RENDER: category chips ============ */
+function renderCats(){
+  const el = document.getElementById('catRow');
+  const counts = {};
+  FAQ_DB.forEach(f=>{ counts[f.cat]=(counts[f.cat]||0)+1; });
+  const all = ["全部", ...CATS];
+  el.innerHTML = all.map(c=>{
+    const n = c==="全部" ? FAQ_DB.length : counts[c];
+    return `<button class="cat-btn ${state.activeCat===c?'active':''}" data-cat="${c}">${c}<span class="cat-count">${n}</span></button>`;
+  }).join('');
+  el.querySelectorAll('.cat-btn').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      state.activeCat = b.dataset.cat;
+      state.query = "";
+      searchInput.value = "";
+      renderCats();
+      renderResults();
+    });
+  });
+}
+
+/* ============ RENDER: scenario chips ============ */
+function renderScenarios(){
+  const el = document.getElementById('scenarioRow');
+  el.innerHTML = SCENARIOS.map(s=>`<button class="scenario-chip" data-seed="${s.seed}">${s.label}</button>`).join('');
+  el.querySelectorAll('.scenario-chip').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      document.getElementById('searchInput').value = b.dataset.seed;
+      state.query = b.dataset.seed;
+      state.activeCat = "全部";
+      renderCats();
+      renderResults();
+    });
+  });
+}
+
+/* 判斷該筆案例的法規是否皆屬國科會主管法規（否則導向全國法規資料庫） */
+function isNstcLaw(laws){
+  if(!laws || laws.length===0) return true;
+  return laws.every(l => l.includes('國科會') || l.includes('國家科學及技術委員會') || l.includes('STRIKE') || l.includes('科研成果法規鬆綁'));
+}
+
+/* ============ RENDER: results ============ */
+function renderResults(){
+  const listEl = document.getElementById('resultList');
+  const metaEl = document.getElementById('resultMeta');
+  const filtered = getFiltered();
+  const clearBtn = document.getElementById('clearBtn');
+  clearBtn.classList.toggle('show', !!state.query);
+
+  metaEl.textContent = state.query
+    ? `關鍵字「${state.query}」共找到 ${filtered.length} 筆結果`
+    : `共 ${filtered.length} 筆案例（點選分類或輸入關鍵字篩選）`;
+
+  if(filtered.length===0){
+    listEl.innerHTML = '<div class="empty-note">找不到符合的項目，請嘗試其他關鍵字（例如：既有成果、技轉收入、大陸地區、股權、讓與）。</div>';
+    return;
+  }
+
+  listEl.innerHTML = filtered.map(({item, score})=>{
+    const isOpen = state.openId===item.id;
+    const isHot = score>=5;
+    const logged = state.loggedIds.has(item.id);
+    const similar = FAQ_DB.filter(f=>f.cat===item.cat && f.id!==item.id).slice(0,3);
+    return `
+      <div class="card ${isOpen?'open':''} ${isHot?'hot':''}" data-id="${item.id}">
+        <div class="top-row" data-toggle="${item.id}">
+          <div>
+            <span class="cat-tag">${item.cat}</span>
+            <p class="q">${item.q}</p>
+          </div>
+          <span class="chev">▶</span>
+        </div>
+        <div class="body">
+          <p class="answer">${item.a}</p>
+          ${item.laws.length ? `<div class="law-tags">${item.laws.map(l=>`<span class="law-tag">§ ${l}</span>`).join('')}</div>` : ''}
+          <div class="card-actions">
+            <button class="mini-btn ${logged?'logged':''}" data-log="${item.id}">${logged?'✓ 已加入知識庫':'＋ 加入知識庫'}</button>
+            <a class="law-link-full" href="${isNstcLaw(item.laws) ? 'https://law.nstc.gov.tw/LawCategoryMain.aspx' : 'https://law.moj.gov.tw/'}" target="_blank" rel="noopener">查看法規全文 ↗</a>
+          </div>
+          ${similar.length? `<div class="similar-wrap">
+            <div class="lbl">相似案例</div>
+            ${similar.map(s=>`<span class="similar-link" data-jump="${s.id}">${s.q}</span>`).join('')}
+          </div>`:''}
+        </div>
+      </div>`;
+  }).join('');
+
+  listEl.querySelectorAll('[data-toggle]').forEach(t=>{
+    t.addEventListener('click', ()=>{
+      const id = parseInt(t.dataset.toggle);
+      state.openId = state.openId===id ? null : id;
+      renderResults();
+    });
+  });
+  listEl.querySelectorAll('[data-log]').forEach(b=>{
+    b.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const id = parseInt(b.dataset.log);
+      if(state.loggedIds.has(id)) return;
+      const item = FAQ_DB.find(f=>f.id===id);
+      addToKB(item);
+      renderResults();
+    });
+  });
+  listEl.querySelectorAll('[data-jump]').forEach(s=>{
+    s.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const id = parseInt(s.dataset.jump);
+      state.openId = id;
+      renderResults();
+      document.querySelector(`.card[data-id="${id}"]`)?.scrollIntoView({behavior:'smooth', block:'center'});
+    });
+  });
+}
+
+/* ============ AI 智能小幫手 ============
+   AI_ENDPOINT 說明：
+   - 在 Claude.ai 對話畫面內直接打開這個檔案測試時，保持下面這個值即可，
+     Claude.ai 會自動代打 Anthropic API，不需要金鑰。
+   - 如果把這個檔案部署到 GitHub Pages／自己的網站等「Claude.ai 以外」的地方，
+     必須改成你自己架設的中介伺服器（Cloudflare Worker）網址，
+     否則瀏覽器會因為沒有金鑰、跨網域限制而連不上，AI 小幫手不會有任何回應。
+     部署方式請參考隨附的 cloudflare-worker.js 檔案內的說明。
+*/
+const AI_ENDPOINT = 'https://api.anthropic.com/v1/messages';
+// 例如部署後改成：const AI_ENDPOINT = 'https://faq-ai-proxy.你的帳號.workers.dev';
+
+const AI_QUICK_QUESTIONS = [
+  "股東配股要申請緩課稅，需要準備什麼文件？流程怎麼走？",
+  "研發成果要授權給大陸地區廠商，該怎麼辦理？",
+  "技轉收入是股權時，要怎麼繳交給國科會？",
+  "研發成果讓與，需要哪些程序與應備文件？",
+];
+
+let aiHistory = []; // {role:'user'|'assistant', content:string}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function buildAiSystemPrompt(){
+  const kb = FAQ_DB.map(f=>({cat:f.cat, q:f.q, a:f.a, laws:f.laws}));
+  return `你是「研發成果 AI 智慧導航查詢系統」內部小幫手，協助承辦人員接電話當下快速回覆學校、教授或廠商關於國科會研發成果（含技轉、股權、大陸地區、緩課擇低課稅、產學合作等）之詢問。
+
+【你可使用的知識庫（組織 FAQ，共${kb.length}筆，JSON）】
+${JSON.stringify(kb)}
+
+【你可引用的法規全文節錄語料庫】
+${LAW_CORPUS}
+
+【回答規則】
+1. 僅根據上述知識庫與法規語料庫回答，不得杜撰不存在的條文內容或案例；如法規語料庫沒有該條文全文，law_basis 的 text 欄位請寫「（本系統未收錄全文，請至法規資料庫查閱）」，不可捏造。
+2. 回答須用臺灣繁體中文，語氣專業、簡潔、口語化，適合承辦人員唸給來電者聽。
+3. 若問題與知識庫、法規語料庫皆無關，仍可禮貌回答，但 law_basis、process_steps、required_docs 留空陣列，並在 answer 中提醒此非本系統收錄範圍。
+4. 「process_steps」：只有當問題明顯涉及「辦理流程／申辦步驟」時才填寫，依合理邏輯順序列出精簡步驟（每步15字以內為佳），否則回傳空陣列。
+5. 「required_docs」：只有當問題涉及「應備文件／檢附資料」時才填寫，否則回傳空陣列。
+6. 務必只回傳一個 JSON 物件，不要有任何 JSON 以外的文字、不要用 markdown code fence 包裹。
+
+【輸出格式（僅回傳此 JSON，欄位皆為必要欄位，無內容則給空陣列）】
+{
+  "answer": "簡潔的口語化解答",
+  "law_basis": [{"law":"法規或要點名稱","article":"條號","text":"該條文相關內容或摘要"}],
+  "process_steps": ["步驟一", "步驟二"],
+  "required_docs": ["應備文件一", "應備文件二"]
+}`;
+}
+
+function renderAiTyping(){
+  const log = document.getElementById('aiLog');
+  const row = document.createElement('div');
+  row.className = 'msg-row ai';
+  row.id = 'aiTypingRow';
+  row.innerHTML = `<div class="msg-avatar">研</div><div class="msg-bubble"><div class="ai-typing"><span></span><span></span><span></span></div></div>`;
+  log.appendChild(row);
+  log.scrollTop = log.scrollHeight;
+}
+function removeAiTyping(){
+  document.getElementById('aiTypingRow')?.remove();
+}
+
+function appendUserMsg(text){
+  const log = document.getElementById('aiLog');
+  const row = document.createElement('div');
+  row.className = 'msg-row user';
+  row.innerHTML = `<div class="msg-avatar">我</div><div class="msg-bubble">${escapeHtml(text)}</div>`;
+  log.appendChild(row);
+  log.scrollTop = log.scrollHeight;
+}
+
+function appendAiMsg(html){
+  const log = document.getElementById('aiLog');
+  const row = document.createElement('div');
+  row.className = 'msg-row ai';
+  row.innerHTML = `<div class="msg-avatar">研</div><div class="msg-bubble">${html}</div>`;
+  log.appendChild(row);
+  log.scrollTop = log.scrollHeight;
+}
+
+function buildAiContentHtml(parsed){
+  let html = `<p class="ai-answer-text">${escapeHtml(parsed.answer||'')}</p>`;
+
+  if(parsed.law_basis && parsed.law_basis.length){
+    html += `<div class="ai-block-title">法規依據與條文內容</div>`;
+    html += parsed.law_basis.map(lb=>{
+      const noFull = !lb.text || lb.text.includes('未收錄全文');
+      return `<div class="law-cite ${noFull?'lc-nofull':''}">
+        <div class="lc-head"><span class="lc-name">${escapeHtml(lb.law||'')}</span><span class="lc-src">${escapeHtml(lb.article||'')}</span></div>
+        <div class="lc-text">${escapeHtml(lb.text||'')}</div>
+      </div>`;
+    }).join('');
+  }
+
+  if(parsed.process_steps && parsed.process_steps.length){
+    html += `<div class="ai-block-title">流程導航</div>`;
+    html += `<div class="proc-nav">${parsed.process_steps.map((s,i)=>`
+      <div class="proc-step"><div class="ps-dot">${i+1}</div><div class="ps-text">${escapeHtml(s)}</div></div>`).join('')}</div>`;
+  }
+
+  if(parsed.required_docs && parsed.required_docs.length){
+    html += `<div class="ai-block-title">應備文件</div>`;
+    html += `<ul class="doc-list">${parsed.required_docs.map(d=>`<li>${escapeHtml(d)}</li>`).join('')}</ul>`;
+  }
+
+  return html;
+}
+
+function parseAiJson(text){
+  let clean = text.trim().replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
+  const start = clean.indexOf('{');
+  const end = clean.lastIndexOf('}');
+  if(start>=0 && end>start) clean = clean.slice(start, end+1);
+  return JSON.parse(clean);
+}
+
+async function sendAiMessage(question){
+  if(!question.trim()) return;
+  const sendBtn = document.getElementById('aiSendBtn');
+  const input = document.getElementById('aiInput');
+  sendBtn.disabled = true;
+  appendUserMsg(question);
+  aiHistory.push({role:'user', content: question});
+  input.value = '';
+  input.style.height = 'auto';
+  renderAiTyping();
+
+  try{
+    const response = await fetch(AI_ENDPOINT, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:1000,
+        system: buildAiSystemPrompt(),
+        messages: aiHistory.slice(-10),
+      })
+    });
+    const data = await response.json();
+    const textBlock = (data.content||[]).map(c=>c.text||'').join('\n');
+    removeAiTyping();
+    let parsed;
+    try{ parsed = parseAiJson(textBlock); }
+    catch(e){ parsed = {answer: textBlock || '（AI 回覆解析失敗，請再試一次或換個問法）', law_basis:[], process_steps:[], required_docs:[]}; }
+    appendAiMsg(buildAiContentHtml(parsed));
+    aiHistory.push({role:'assistant', content: textBlock});
+  }catch(err){
+    removeAiTyping();
+    appendAiMsg(`<div class="ai-error">AI 小幫手連線失敗（${escapeHtml(err.message||'未知錯誤')}）。<br>如果這個頁面不是在 Claude.ai 對話畫面裡開啟的，通常是因為還沒設定自己的代理伺服器網址（AI_ENDPOINT），請參考 cloudflare-worker.js 的說明部署後再試一次。</div>`);
+  }finally{
+    sendBtn.disabled = false;
+  }
+}
+
+function renderAiQuick(){
+  const el = document.getElementById('aiQuickRow');
+  el.innerHTML = AI_QUICK_QUESTIONS.map(q=>`<span class="ai-quick-chip" data-q="${escapeHtml(q)}">${q}</span>`).join('');
+  el.querySelectorAll('.ai-quick-chip').forEach(c=>{
+    c.addEventListener('click', ()=> sendAiMessage(c.dataset.q));
+  });
+}
+
+function initAiChat(){
+  renderAiQuick();
+  const input = document.getElementById('aiInput');
+  const sendBtn = document.getElementById('aiSendBtn');
+  const submit = ()=> sendAiMessage(input.value);
+  sendBtn.addEventListener('click', submit);
+  input.addEventListener('keydown', e=>{
+    if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }
+  });
+  input.addEventListener('input', ()=>{
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 120)+'px';
+  });
+}
+
+/* ============ INIT ============ */
+const searchInput = document.getElementById('searchInput');
+searchInput.addEventListener('input', ()=>{
+  state.query = searchInput.value;
+  renderResults();
+});
+document.getElementById('clearBtn').addEventListener('click', ()=>{
+  searchInput.value = ''; state.query = ''; renderResults(); searchInput.focus();
+});
+
+renderCats();
+renderScenarios();
+renderResults();
+loadKB();
+initAiChat();
+</script>
+</body>
+</html>
